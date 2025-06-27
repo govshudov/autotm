@@ -1,0 +1,13 @@
+is_debug: true
+listen:
+  type: port
+  port: :8000
+  bind_ip: 0.0.0.0
+storage:
+  psql:
+    host: localhost
+    port: 5432
+    database: auth
+    username: autotm
+    password: autotm
+    pg_pool_max_conn: 400
