@@ -9,6 +9,13 @@ Request
 ```
 {
     email string `json:"email"`
+    device {
+        UniqKey       string `json:"uniqKey" validate:"required|min_len:1"`
+        Model         string `json:"model" validate:"required|min_len:1"`
+        Name          string `json:"name" validate:"required|min_len:1"`
+        System        string `json:"system" validate:"required|min_len:1"`
+        SystemVersion string `json:"systemVersion" validate:"required|min_len:1"`        
+    }
 }
 ```
 
@@ -22,7 +29,8 @@ Bolup biljek status code lar:
 
 - 400 eger validation dan gecmese
 - 500 service de yada database bilen baglansykly errorlar
-- 429 eger mail blocklanan maillerin icinde bar bolsa 
+- 429 eger client blocklanan kisilerin icinde bar bolsa 
+- 403 eger client send mail limitini gecse
 - 200 success bolsa 
 
 ```sql
@@ -31,8 +39,14 @@ CREATE TABLE blocked_mails(
 );
 ```
 - Logic
+  + Hacanda client send sms yuzlenende mail_device_unique seklinde redisde ululyk arttyrmaly eger olaryn sany 5 den gecse client in sol devici 1 sagat block etmeli (yagny mail ugratmaly dal)
   + Validation edende mail i blocklanan mail lerin icinden barlamaly
-  + Response de jwt token bermeli 
+  + Response de jwt token bermeli (auth ucin bir sany jwt key bolmaly) tokenin icinde device maglumatlar bolmaly
+    + UniqKey
+    + Model
+    + Name
+    + System
+    + SystemVersion
 ---
 
 ## POST auth/mail/verify
@@ -57,19 +71,34 @@ Bolup biljek status code lar:
 - 401 token is expired
 - 406 mail code is incorrect
 - 423 user is blocked
+- 429 try code exceeded limit
 - 500 service de yada database bilen baglansykly errorlar
 - 200 success (user doesn't exist go to registration)
 - 202 (user already exist go to log in)
 
 
+```sql
+CREATE TABLE user_devices(
+    user_id bigint not null,
+    uniq_id text not null, 
+    firebase_token text,
+    name character varying(100),
+    model character varying(100),
+    system character varying(100),
+    system_version character varying(100),
+    app_version character varying(100)
+);
+-- users table bilen reference bolmaly
+```
 - Logic
+  + exceeded limit check etmeli
   + gelen mail i validation etmeli
   + gelen tokenin omruni barlamaly
   + gelen kody tokendaki kod bilen denesdirmeli
-  + users service gitmeli shular yaly user barmy barlamaly
   + users serviceden user blockmy dalmi check etmeli
-  + token doretmeli user on bar bolsa standart time bermeli yok bolsa registration ucin wagty bir sagat etmeli
----
+  + users service gitmeli shular yaly user barmy barlamaly 
+    + bar bolsa user_devices table e token den gelen device data leri insert etmeli on bar bolsa update etmeli (unique id boyuncha)
+  + token doretmeli user on bar bolsa standart time bermeli yok bolsa registration ucin 1 sagat bermeli
 
 ## POST auth/mail/registration
 User i registrasiya etmeli 
@@ -88,7 +117,7 @@ Request
 Response
 ```
 {
-    userID int64
+    userID string
     token string
 }
 ```
@@ -112,14 +141,13 @@ CREATE TABLE users(
 - Logic
   + token middleware 
   + nickname barlamaly validation ve user service den barlamaly shular yaly nickname bar bolsa gerekli error return etmeli
-  + users table insert gitmeli
+  + users table insert gitmeli sonra user devices e gitmeli devices i token den almaly
   + token generate etmeli
 ---
 
 
 # By OAuth2 Service
 
-## GET auth/google/login
 ## Example: 
 ```go
 package main
@@ -237,7 +265,7 @@ func main() {
 	log.Println("Server started at :8080")
 	log.Fatal(http.ListenAndServe("0.0.0.0:8080", cors(r)))
 }
-````
+
 ```
 { }
 ```
@@ -276,7 +304,6 @@ CREATE TABLE oauth2(
   + code boyuncha google den token almaly we token boyuncha user in maglumatlaryny almaly
   + gelen maglumatlary oauth2 table gosmaly
   + static bir frontend api redirect etmeli (url de code bolmaly) 
----
 
 ## POST auth/google/verify
 Account Verify 
@@ -289,6 +316,13 @@ Request
 ```
 {
     code string 
+    device {
+        UniqKey       string `json:"uniqKey" validate:"required|min_len:1"`
+        Model         string `json:"model" validate:"required|min_len:1"`
+        Name          string `json:"name" validate:"required|min_len:1"`
+        System        string `json:"system" validate:"required|min_len:1"`
+        SystemVersion string `json:"systemVersion" validate:"required|min_len:1"`        
+    }
 }
 ```
 Response 
@@ -309,9 +343,11 @@ insert into users(
 ) values (?, ?, ?, ?, ?);
 ```
 
+
 - Logic
   + request url de gelen cody requestde ugratmaly 
   + code boyuncha userin maglumatlaryny oauth2 den almaly yok bolsa err return
+  + user in device insert etmeli bar bolsa update
   + user yok bolsa insert etmeli  
   + token generate etmeli
 ---

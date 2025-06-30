@@ -9,10 +9,10 @@ import (
 )
 
 type HTTPHandler struct {
-	service *services.CartService
+	service *services.CartServiceImpl
 }
 
-func NewHTTPHandler(service *services.CartService) *HTTPHandler {
+func NewHTTPHandler(service *services.CartServiceImpl) *HTTPHandler {
 	return &HTTPHandler{service: service}
 }
 
