@@ -48,6 +48,52 @@ CREATE TABLE blocked_mails(
     + System
     + SystemVersion
 ---
+## POST auth/sms/send
+Client e sms ugratmaly
+
+Request
+```
+{
+    phone_number string `json:"email"`
+    device {
+        UniqKey       string `json:"uniqKey" validate:"required|min_len:1"`
+        Model         string `json:"model" validate:"required|min_len:1"`
+        Name          string `json:"name" validate:"required|min_len:1"`
+        System        string `json:"system" validate:"required|min_len:1"`
+        SystemVersion string `json:"systemVersion" validate:"required|min_len:1"`        
+    }
+}
+```
+
+Response
+```
+{
+    token string
+}
+```
+Bolup biljek status code lar:
+
+- 400 eger validation dan gecmese
+- 500 service de yada database bilen baglansykly errorlar
+- 429 eger client blocklanan kisilerin icinde bar bolsa 
+- 403 eger client send sms limitini gecse
+- 200 success bolsa 
+
+```sql
+CREATE TABLE blocked_mails(
+    mail text not null default ''
+);
+```
+- Logic
+  + Hacanda client send sms yuzlenende mail_device_unique seklinde redisde ululyk arttyrmaly eger olaryn sany 5 den gecse client in sol devici 1 sagat block etmeli (yagny mail ugratmaly dal)
+  + Validation edende mail i blocklanan mail lerin icinden barlamaly
+  + Response de jwt token bermeli (auth ucin bir sany jwt key bolmaly) tokenin icinde device maglumatlar bolmaly
+    + UniqKey
+    + Model
+    + Name
+    + System
+    + SystemVersion
+---
 
 ## POST auth/mail/verify
 Clientden code gelyar shony check etmeli
