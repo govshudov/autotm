@@ -80,8 +80,8 @@ Bolup biljek status code lar:
 - 200 success bolsa 
 
 ```sql
-CREATE TABLE blocked_mails(
-    mail text not null default ''
+CREATE TABLE blocked_numbers(
+    phone_number text not null default ''
 );
 ```
 - Logic
